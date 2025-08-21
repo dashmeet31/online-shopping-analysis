@@ -21,6 +21,13 @@ def load_and_clean_data():
     if "Order Date" in df.columns:
         df["Order Date"] = pd.to_datetime(df["Order Date"], errors="coerce")
 
+    # Ensure Total Amount is numeric
+    if "Total Amount" in df.columns:
+        df["Total Amount"] = pd.to_numeric(df["Total Amount"], errors="coerce")
+
+    # Drop rows with missing critical fields
+    df = df.dropna(subset=["Total Amount", "City"])
+
     return df
 
 # Load cleaned dataset
@@ -46,7 +53,7 @@ if st.button("📊 Show Dataset Statistics"):
     st.write(df.isnull().sum())
 
     st.subheader("Summary Statistics")
-    st.write(df.describe())
+    st.write(df.describe(include="all"))
 
     st.subheader("Dataset Info")
     buffer = io.StringIO()
@@ -87,22 +94,23 @@ if st.button("📈 Show Visualizations"):
     st.pyplot(fig5)
 
     st.subheader("Monthly Sales Trend")
-    df['Month'] = df['Order Date'].dt.to_period('M')
-    monthly_sales = df.groupby('Month')['Total Amount'].sum().reset_index()
-    monthly_sales['Month'] = monthly_sales['Month'].astype(str)
+    if "Order Date" in df.columns:
+        df['Month'] = df['Order Date'].dt.to_period('M')
+        monthly_sales = df.groupby('Month')['Total Amount'].sum().reset_index()
+        monthly_sales['Month'] = monthly_sales['Month'].astype(str)
 
-    fig6, ax6 = plt.subplots(figsize=(10, 5))
-    sns.lineplot(data=monthly_sales, x='Month', y='Total Amount', marker='o', color='purple', ax=ax6)
-    plt.xticks(rotation=45)
-    st.pyplot(fig6)
+        fig6, ax6 = plt.subplots(figsize=(10, 5))
+        sns.lineplot(data=monthly_sales, x='Month', y='Total Amount', marker='o', color='purple', ax=ax6)
+        plt.xticks(rotation=45)
+        st.pyplot(fig6)
 
     st.subheader("Correlation Heatmap")
     numeric_df = df.select_dtypes(include=['int64', 'float64'])
-    corr_matrix = numeric_df.corr()
-
-    fig7, ax7 = plt.subplots(figsize=(8, 6))
-    sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5, ax=ax7)
-    st.pyplot(fig7)
+    if not numeric_df.empty:
+        corr_matrix = numeric_df.corr()
+        fig7, ax7 = plt.subplots(figsize=(8, 6))
+        sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5, ax=ax7)
+        st.pyplot(fig7)
 
 # ----------------------------- Section 4: Summary Insights -----------------------------
 if st.button("📝 Show Summary Insights"):
